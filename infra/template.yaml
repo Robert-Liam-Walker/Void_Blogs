@@ -1,0 +1,137 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Void Blogs - Serverless blog on AWS (DynamoDB + Lambda + API Gateway)
+
+Globals:
+  Function:
+    Runtime: nodejs18.x
+    Timeout: 10
+    Environment:
+      Variables:
+        TABLE_NAME: !Ref PostsTable
+
+Resources:
+
+  # ── DynamoDB Table ──────────────────────────────────────────────────────────
+  PostsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: VoidBlogsPosts
+      BillingMode: PAY_PER_REQUEST   # on-demand = no capacity planning, free tier friendly
+      AttributeDefinitions:
+        - AttributeName: postId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: postId
+          KeyType: HASH
+      Tags:
+        - Key: Project
+          Value: VoidBlogs
+
+  # ── IAM Role for Lambdas ────────────────────────────────────────────────────
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: VoidBlogsLambdaRole
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: DynamoDBAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:DeleteItem
+                  - dynamodb:Scan
+                  - dynamodb:Query
+                Resource: !GetAtt PostsTable.Arn
+
+  # ── Lambda Functions ────────────────────────────────────────────────────────
+  GetPostsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: VoidBlogs-GetPosts
+      CodeUri: lambdas/
+      Handler: getPosts.handler
+      Role: !GetAtt LambdaRole.Arn
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref VoidBlogsApi
+            Path: /posts
+            Method: GET
+
+  GetPostFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: VoidBlogs-GetPost
+      CodeUri: lambdas/
+      Handler: getPost.handler
+      Role: !GetAtt LambdaRole.Arn
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref VoidBlogsApi
+            Path: /posts/{postId}
+            Method: GET
+
+  CreatePostFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: VoidBlogs-CreatePost
+      CodeUri: lambdas/
+      Handler: createPost.handler
+      Role: !GetAtt LambdaRole.Arn
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref VoidBlogsApi
+            Path: /posts
+            Method: POST
+
+  DeletePostFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: VoidBlogs-DeletePost
+      CodeUri: lambdas/
+      Handler: deletePost.handler
+      Role: !GetAtt LambdaRole.Arn
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref VoidBlogsApi
+            Path: /posts/{postId}
+            Method: DELETE
+
+  # ── API Gateway ─────────────────────────────────────────────────────────────
+  VoidBlogsApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: VoidBlogsAPI
+      StageName: prod
+      Cors:
+        AllowMethods: "'GET,POST,DELETE,OPTIONS'"
+        AllowHeaders: "'Content-Type'"
+        AllowOrigin: "'*'"
+
+Outputs:
+  ApiUrl:
+    Description: API Gateway endpoint URL
+    Value: !Sub "https://${VoidBlogsApi}.execute-api.${AWS::Region}.amazonaws.com/prod"
+  TableName:
+    Description: DynamoDB table name
+    Value: !Ref PostsTable
