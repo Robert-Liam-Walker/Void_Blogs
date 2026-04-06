@@ -12,12 +12,12 @@ Globals:
 
 Resources:
 
-  # ── DynamoDB Table ──────────────────────────────────────────────────────────
+  # DynamoDB Table
   PostsTable:
     Type: AWS::DynamoDB::Table
     Properties:
       TableName: VoidBlogsPosts
-      BillingMode: PAY_PER_REQUEST   # on-demand = no capacity planning, free tier friendly
+      BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
         - AttributeName: postId
           AttributeType: S
@@ -28,7 +28,7 @@ Resources:
         - Key: Project
           Value: VoidBlogs
 
-  # ── IAM Role for Lambdas ────────────────────────────────────────────────────
+  # IAM Role for Lambdas
   LambdaRole:
     Type: AWS::IAM::Role
     Properties:
@@ -56,12 +56,12 @@ Resources:
                   - dynamodb:Query
                 Resource: !GetAtt PostsTable.Arn
 
-  # ── Lambda Functions ────────────────────────────────────────────────────────
+  # Lambda Functions
   GetPostsFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: VoidBlogs-GetPosts
-      CodeUri: lambdas/
+      CodeUri: ../backend/lambdas/
       Handler: getPosts.handler
       Role: !GetAtt LambdaRole.Arn
       Events:
@@ -76,7 +76,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: VoidBlogs-GetPost
-      CodeUri: lambdas/
+      CodeUri: ../backend/lambdas/
       Handler: getPost.handler
       Role: !GetAtt LambdaRole.Arn
       Events:
@@ -91,7 +91,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: VoidBlogs-CreatePost
-      CodeUri: lambdas/
+      CodeUri: ../backend/lambdas/
       Handler: createPost.handler
       Role: !GetAtt LambdaRole.Arn
       Events:
@@ -106,7 +106,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: VoidBlogs-DeletePost
-      CodeUri: lambdas/
+      CodeUri: ../backend/lambdas/
       Handler: deletePost.handler
       Role: !GetAtt LambdaRole.Arn
       Events:
@@ -117,7 +117,7 @@ Resources:
             Path: /posts/{postId}
             Method: DELETE
 
-  # ── API Gateway ─────────────────────────────────────────────────────────────
+  # API Gateway
   VoidBlogsApi:
     Type: AWS::Serverless::Api
     Properties:
